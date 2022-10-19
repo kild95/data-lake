@@ -12,8 +12,9 @@ The repository is made up of the following files:
 
 ```
 .
-├── dl.cfg       # Configuration file containing AWS IAM credentials
-├── etl.py       # Extracts data from S3 and processes using Spark
+├── dl.cfg                   # Configuration file containing AWS IAM credentials
+├── etl.py                   # Extracts data from S3 and processes using Spark
+├── hadoop-aws-2.7.0.jar     # Support Integration with AWS
 └── README.md
 
 ```
