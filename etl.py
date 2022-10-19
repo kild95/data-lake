@@ -12,15 +12,10 @@ config.read('dl.cfg')
 os.environ['AWS_ACCESS_KEY_ID']=config['AWS']['AWS_ACCESS_KEY_ID']
 os.environ['AWS_SECRET_ACCESS_KEY']=config['AWS']['AWS_SECRET_ACCESS_KEY']
 
-conf = SparkConf().set("spark.jars", "/org.apache.hadoop:hadoop-aws:2.7.0.jar") # just trying this per https://knowledge.udacity.com/questions/886926
+conf = SparkConf().set("spark.jars", "org.apache.hadoop:hadoop-aws:2.7.0.jar") # just trying this per https://knowledge.udacity.com/questions/886926
 
 def create_spark_session():
     # updating per: https://knowledge.udacity.com/questions/886926 - I downloaded hadoop-aws-2.7.0.jar and placed in the workspace
-    # older config line : # .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
-#     spark = SparkSession \
-#         .builder \
-#         .config("spark.jars", "org.apache.hadoop:hadoop-aws:2.7.0") \
-#         .getOrCreate()
     spark = SparkSession \
         .builder \
         .getOrCreate()
@@ -30,7 +25,7 @@ def create_spark_session():
 def process_song_data(spark, input_data, output_data):
     # get filepath to song data file
     # unzipped from terminal because spark cannot read zipped files - https://knowledge.udacity.com/questions/145486
-    song_data = f'{input_data}song_data/*/*/*/*.json' 
+    song_data = f'{input_data}*/*/*/*.json' 
     
     # read song data file
     df = spark.read.json(song_data)
@@ -44,7 +39,7 @@ def process_song_data(spark, input_data, output_data):
     # using artist_id instead of artist in case there are two artists with the same name
     songs_table.write.partitionBy('year', 'artist_id').parquet(f'{output_data}songs_table')
 
-#     # extract columns to create artists table
+    # extract columns to create artists table
     artists_table = df.select(
         'artist_id', 
         F.col('artist_name').alias('name'), 
@@ -53,13 +48,16 @@ def process_song_data(spark, input_data, output_data):
         F.col('artist_longitude').alias('longitude')
     ).dropDuplicates() # in case there are repeat artists
     
-#     # write artists table to parquet files
+    # write artists table to parquet files
     artists_table.write.parquet(f'{output_data}artists_table')
+    
+    # creating a view of song_df_table for use with spark.sql later
+    df.createOrReplaceTempView('song_df_table')
 
 
 def process_log_data(spark, input_data, output_data):
     # get filepath to log data file
-    log_data = f'{input_data}log_data/*.json'
+    log_data = f'{input_data}*.json'
 
     # read log data file
     df = spark.read.json(log_data)
@@ -99,7 +97,10 @@ def process_log_data(spark, input_data, output_data):
     time_table.write.partitionBy('year', 'month').parquet(output_data + 'time_table')
 
     # read in song data to use for songplays table
-    song_df = spark.read.json(f'{input_data}song_data/*/*/*/*.json')
+    # better to use generalisable code rather than giving exact path to the file (input_data is specific to log data location now)
+    song_df = spark.sql(
+        '''SELECT DISTINCT song_id, title, artist_id, artist_name FROM song_df_table'''
+    )
 
     # extract columns from joined song and log datasets to create songplays table 
     # need to match records based on song AND artist
@@ -127,25 +128,15 @@ def process_log_data(spark, input_data, output_data):
 
 def main():
     spark = create_spark_session()
-    input_data = "/home/workspace/data/" # "s3a://udacity-dend/" # "s3a://udacity-dend/song-data/"
+    
+    input_data_song = "s3a://udacity-dend/song-data/" # "/home/workspace/data/song_data/" # "s3a://udacity-dend/song-data/"
+    input_data_log = "s3a://udacity-dend/log-data/" # "/home/workspace/data/log_data/" # "s3a://udacity-dend/log-data/"
+    
     output_data = "/home/workspace/data/" # "s3a://udacity-dend/"
     
-    process_song_data(spark, input_data, output_data)   
-    process_log_data(spark, input_data, output_data)
+    process_song_data(spark, input_data_song, output_data)   
+    process_log_data(spark, input_data_log, output_data)
 
 
 if __name__ == "__main__":
     main()
-    
-    
-#     df_temp = spark.read.json('/home/workspace/data/log_data/*.json')
-#     df_temp = df_temp.withColumn('timestamp', (F.col('ts')/1000)) ## converting to s from ms, as from_unixtime() works with seconds
-#     df_temp = df_temp.withColumn('datetime', F.from_unixtime(F.col('timestamp')))
-#     df_temp = df_temp.withColumn('hour', F.hour(F.col('datetime'))) \
-#                         .withColumn('day', F.dayofmonth(F.col('datetime'))) \
-#                         .withColumn('week', F.weekofyear(F.col('datetime'))) \
-#                         .withColumn('month', F.month(F.col('datetime'))) \
-#                         .withColumn('year', F.year(F.col('datetime'))) \
-#                         .withColumn('weekday', F.dayofweek(F.col('datetime'))) 
-#     df_temp.printSchema()
-#     df_temp.select('ts', 'timestamp', 'datetime', 'hour', 'day', 'week', 'month', 'year').show(truncate=False) 
