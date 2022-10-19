@@ -2,8 +2,6 @@ import configparser
 from datetime import datetime
 import os
 from pyspark.sql import SparkSession
-# from pyspark.sql.functions import udf, col
-# from pyspark.sql.functions import year, month, dayofmonth, hour, weekofyear, date_format
 import pyspark.sql.functions as F
 import pyspark.sql.types as t
 from pyspark.conf import SparkConf ## adding this myself - may not need it
@@ -81,13 +79,11 @@ def process_log_data(spark, input_data, output_data):
     # write users table to parquet files
     users_table.write.parquet(f'{output_data}users_table')
 
-    # create timestamp column from original timestamp column ## taking this to mean convert to seconds from ms
-#     get_timestamp = udf() ## I do not want to use a udf if possible
+    # create timestamp column from original timestamp column
     # just changing to seconds. I don't see what else would be useful here
     df = df.withColumn('timestamp', (F.col('ts')/1000)) ## converting to s from ms, as .from_unixtime() works with seconds
     
     # create datetime column from original timestamp column  ## taking this to mean get date from seconds
-#     get_datetime = udf() ## I do not want to use a udf if possible
     df = df.withColumn('datetime', F.from_unixtime(F.col('timestamp')))
     
     # extract columns to create time table
