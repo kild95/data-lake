@@ -1,30 +1,20 @@
-import configparser
 from datetime import datetime
-import os
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 import pyspark.sql.types as t
 from pyspark.conf import SparkConf
 
-config = configparser.ConfigParser()
-config.read('dl.cfg')
-os.environ['AWS_ACCESS_KEY_ID']=config['AWS']['AWS_ACCESS_KEY_ID']
-os.environ['AWS_SECRET_ACCESS_KEY']=config['AWS']['AWS_SECRET_ACCESS_KEY']
-
-
 def create_spark_session():
     '''
-    Note: Ignore bad gateway error related to bintray which looks like "SERVER ERROR: Bad Gateway url=https://dl.bintray.com/spark-packages/maven/joda-time/"
+    note: ignore bad gateway error related to bin tray
     '''
     spark = SparkSession \
         .builder \
-        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
         .getOrCreate()
     return spark
 
 def process_song_data(spark, input_data, output_data):
     # get filepath to song data file
-    # unzipped from terminal because spark cannot read zipped files - https://knowledge.udacity.com/questions/145486
     song_data = f'{input_data}*/*/*/*.json' 
     
     # read song data file
@@ -121,10 +111,10 @@ def process_log_data(spark, input_data, output_data):
 def main():
     spark = create_spark_session()
     
-    input_data_song = "/home/workspace/data/song_data/"  # "s3a://udacity-dend/song-data/"
-    input_data_log = "/home/workspace/data/log_data/" # "s3a://udacity-dend/log-data/"  
+    input_data_song = "s3a://udacity-dend/song-data/" 
+    input_data_log = "s3a://udacity-dend/log-data/"
     
-    output_data = "/home/workspace/data/" # "s3a://udacity-dend/"
+    output_data = "s3a://udacity-data-eng-nanodegree/data_lake_proj/" 
     
     process_song_data(spark, input_data_song, output_data)   
     process_log_data(spark, input_data_log, output_data)
